@@ -1,0 +1,563 @@
+import * as React from 'react';
+import PropTypes from 'prop-types';
+import { styled, alpha } from '@mui/material/styles';
+import Box from '@mui/material/Box';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TablePagination from '@mui/material/TablePagination';
+import TableRow from '@mui/material/TableRow';
+import TableSortLabel from '@mui/material/TableSortLabel';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import Paper from '@mui/material/Paper';
+import Checkbox from '@mui/material/Checkbox';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Switch from '@mui/material/Switch';
+import DeleteIcon from '@mui/icons-material/Delete';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import { visuallyHidden } from '@mui/utils';
+import SearchIcon from '@mui/icons-material/Search';
+import InputBase from '@mui/material/InputBase';
+
+function createData(descripcion, categoria, sku, ean, pvp) {
+    return {
+        descripcion,
+        categoria,
+        sku,
+        ean,
+        pvp,
+    };
+}
+
+const Search = styled('div')(({ theme }) => ({
+    position: 'relative',
+    borderRadius: theme.shape.borderRadius,
+    backgroundColor: alpha(theme.palette.common.white, 0.15),
+    '&:hover': {
+        backgroundColor: alpha(theme.palette.common.white, 0.25),
+    },
+    marginLeft: 0,
+    width: '100%',
+    [theme.breakpoints.up('sm')]: {
+        marginLeft: theme.spacing(1),
+        width: 'auto',
+    },
+}));
+
+const SearchIconWrapper = styled('div')(({ theme }) => ({
+    padding: theme.spacing(0, 2),
+    height: '100%',
+    position: 'absolute',
+    pointerEvents: 'none',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+}));
+
+const StyledInputBase = styled(InputBase)(({ theme }) => ({
+    color: 'inherit',
+    '& .MuiInputBase-input': {
+        padding: theme.spacing(1, 1, 1, 0),
+        // vertical padding + font size from searchIcon
+        paddingLeft: `calc(1em + ${theme.spacing(4)})`,
+        transition: theme.transitions.create('width'),
+        width: '100%',
+        [theme.breakpoints.up('sm')]: {
+            width: '12ch',
+            '&:focus': {
+                width: '20ch',
+            },
+        },
+    },
+}));
+
+
+
+// const rows = [
+//     createData('Filtro Fiat 1500', 'filtros', 134127, 3241167, '$3000'),
+//     createData('Filtro ford fiesta', 'filtros', 5426254, 345624, '$4000'),
+//     createData('Filtro particulas', 'maquinas de herramientas', 4134513, 1435315, '$1500'),
+//     createData('filtro conico', 'repuestos automotor', 3414331, 3243242, '$7600'),
+//     // createData('Gingerbread', 356, 16.0, 49, 3.9),
+//     // createData('Honeycomb', 408, 3.2, 87, 6.5),
+//     // createData('Ice cream sandwich', 237, 9.0, 37, 4.3),
+//     // createData('Jelly Bean', 375, 0.0, 94, 0.0),
+//     // createData('KitKat', 518, 26.0, 65, 7.0),
+//     // createData('Lollipop', 392, 0.2, 98, 0.0),
+//     // createData('Marshmallow', 318, 0, 81, 2.0),
+//     // createData('Nougat', 360, 19.0, 9, 37.0),
+//     // createData('Oreo', 437, 18.0, 63, 4.0),
+// ];
+
+function descendingComparator(a, b, orderBy) {
+    if (b[orderBy] < a[orderBy]) {
+        return -1;
+    }
+    if (b[orderBy] > a[orderBy]) {
+        return 1;
+    }
+    return 0;
+}
+
+function getComparator(order, orderBy) {
+    return order === 'desc'
+        ? (a, b) => descendingComparator(a, b, orderBy)
+        : (a, b) => -descendingComparator(a, b, orderBy);
+}
+
+// Since 2020 all major browsers ensure sort stability with Array.prototype.sort().
+// stableSort() brings sort stability to non-modern browsers (notably IE11). If you
+// only support modern browsers you can replace stableSort(exampleArray, exampleComparator)
+// with exampleArray.slice().sort(exampleComparator)
+function stableSort(array, comparator) {
+    const stabilizedThis = array.map((el, index) => [el, index]);
+    stabilizedThis.sort((a, b) => {
+        const order = comparator(a[0], b[0]);
+        if (order !== 0) {
+            return order;
+        }
+        return a[1] - b[1];
+    });
+    return stabilizedThis.map((el) => el[0]);
+}
+
+const headCells = [
+    {
+        id: 'descripcion',
+        numeric: false,
+        disablePadding: true,
+        label: 'Nombre',
+    },
+    {
+        id: 'categoria',
+        numeric: true,
+        disablePadding: false,
+        label: 'Categoria',
+    },
+    {
+        id: 'sku',
+        numeric: true,
+        disablePadding: false,
+        label: 'SKU',
+    },
+    {
+        id: 'ean',
+        numeric: true,
+        disablePadding: false,
+        label: 'EAN',
+    },
+    {
+        id: 'pvp',
+        numeric: true,
+        disablePadding: false,
+        label: 'Precio',
+    },
+];
+
+const DEFAULT_ORDER = 'asc';
+const DEFAULT_ORDER_BY = 'categoria';
+const DEFAULT_ROWS_PER_PAGE = 5;
+
+function EnhancedTableHead(props) {
+    const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort } =
+        props;
+    const createSortHandler = (newOrderBy) => (event) => {
+        onRequestSort(event, newOrderBy);
+    };
+
+    return (
+        <TableHead>
+            <TableRow>
+                <TableCell padding="checkbox">
+                    {/* <Checkbox
+                        color="primary"
+                        indeterminate={numSelected > 0 && numSelected < rowCount}
+                        checked={rowCount > 0 && numSelected === rowCount}
+                        onChange={onSelectAllClick}
+                        inputProps={{
+                            'aria-label': 'select all desserts',
+                        }}
+                    /> */}
+                </TableCell>
+                {headCells.map((headCell) => (
+                    <TableCell
+                        key={headCell.id}
+                        align={headCell.numeric ? 'right' : 'left'}
+                        padding={headCell.disablePadding ? 'none' : 'normal'}
+                        sortDirection={orderBy === headCell.id ? order : false}
+                    >
+                        <TableSortLabel
+                            active={orderBy === headCell.id}
+                            direction={orderBy === headCell.id ? order : 'asc'}
+                            onClick={createSortHandler(headCell.id)}
+                        >
+                            {headCell.label}
+                            {orderBy === headCell.id ? (
+                                <Box component="span" sx={visuallyHidden}>
+                                    {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
+                                </Box>
+                            ) : null}
+                        </TableSortLabel>
+                    </TableCell>
+                ))}
+            </TableRow>
+        </TableHead>
+    );
+}
+
+EnhancedTableHead.propTypes = {
+    numSelected: PropTypes.number.isRequired,
+    onRequestSort: PropTypes.func.isRequired,
+    onSelectAllClick: PropTypes.func.isRequired,
+    order: PropTypes.oneOf(['asc', 'desc']).isRequired,
+    orderBy: PropTypes.string.isRequired,
+    rowCount: PropTypes.number.isRequired,
+};
+
+function EnhancedTableToolbar(props) {
+    const { numSelected } = props;
+
+    return (
+        <Toolbar
+            sx={{
+                pl: { sm: 2 },
+                pr: { xs: 1, sm: 1 },
+                ...(numSelected > 0 && {
+                    bgcolor: (theme) =>
+                        alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
+                }),
+            }}
+        >
+            {numSelected > 0 ? (
+                <Typography
+                    sx={{ flex: '1 1 100%' }}
+                    color="inherit"
+                    variant="subtitle1"
+                    component="div"
+                >
+                    {numSelected} selected
+                </Typography>
+            ) : (
+                <>
+                    <Typography
+                        sx={{ flex: '1 1 100%' }}
+                        variant="h6"
+                        id="tableTitle"
+                        component="div"
+                    >
+                        Inventario
+                    </Typography>
+                    <Search>
+                        <SearchIconWrapper>
+                            <SearchIcon />
+                        </SearchIconWrapper>
+                        <StyledInputBase
+                            placeholder="Filtrar"
+                            inputProps={{ 'aria-label': 'search' }}
+                        />
+                    </Search>
+                </>
+            )}
+
+            {numSelected > 0 ? (
+                <Tooltip title="Delete">
+                    <IconButton>
+                        <DeleteIcon />
+                    </IconButton>
+                </Tooltip>
+            ) : (
+                <Tooltip title="Filter list">
+                    <IconButton>
+                        <FilterListIcon />
+                    </IconButton>
+                </Tooltip>
+            )}
+        </Toolbar>
+    );
+}
+
+EnhancedTableToolbar.propTypes = {
+    numSelected: PropTypes.number.isRequired,
+};
+
+EnhancedTable.propTypes = {
+    data: PropTypes.arrayOf(
+        PropTypes.shape({
+            descripcion: PropTypes.string.isRequired,
+            categoria: PropTypes.string.isRequired,
+            stock: PropTypes.number.isRequired,
+            sold: PropTypes.number.isRequired,
+            price: PropTypes.string.isRequired,
+        })
+    ).isRequired,
+};
+
+
+
+export default function EnhancedTable({ data }) {
+    const [order, setOrder] = React.useState(DEFAULT_ORDER);
+    const [orderBy, setOrderBy] = React.useState(DEFAULT_ORDER_BY);
+    const [selected, setSelected] = React.useState([]);
+    const [page, setPage] = React.useState(0);
+    const [dense, setDense] = React.useState(false);
+    const [visibleRows, setVisibleRows] = React.useState(null);
+    const [rowsPerPage, setRowsPerPage] = React.useState(DEFAULT_ROWS_PER_PAGE);
+    const [paddingHeight, setPaddingHeight] = React.useState(0);
+
+    const rows = data.map((item) =>
+        createData(item.descripcion, item.categoria, item.sku, item.ean, item.pvp)
+    );
+    console.log(data)
+    console.log(rows)
+
+    React.useEffect(() => {
+        let rowsOnMount = stableSort(
+            rows,
+            getComparator(DEFAULT_ORDER, DEFAULT_ORDER_BY),
+        );
+
+        rowsOnMount = rowsOnMount.slice(
+            0 * DEFAULT_ROWS_PER_PAGE,
+            0 * DEFAULT_ROWS_PER_PAGE + DEFAULT_ROWS_PER_PAGE,
+        );
+
+        setVisibleRows(rowsOnMount);
+        console.log('Mounted')
+    }, []);
+
+    React.useEffect(() => {
+        // Update the rows whenever the data prop changes
+        const rows = data.map((item) =>
+            createData(item.descripcion, item.categoria, item.sku, item.ean, item.pvp)
+        );
+
+        let rowsOnMount = stableSort(
+            rows,
+            getComparator(DEFAULT_ORDER, DEFAULT_ORDER_BY),
+        );
+
+        rowsOnMount = rowsOnMount.slice(
+            0 * rowsPerPage,
+            0 * rowsPerPage + rowsPerPage,
+        );
+
+        setVisibleRows(rowsOnMount);
+        setPage(0);
+        console.log('Updated Mount')
+        console.log(rowsOnMount)
+    }, [data]);
+
+    // // Function to update the visible rows and pagination based on sorting, page, and rowsPerPage
+    // const updateVisibleRows = React.useCallback(() => {
+    //     const sortedRows = stableSort(rows, getComparator(order, orderBy));
+
+    //     const startIndex = page * rowsPerPage;
+    //     const endIndex = startIndex + rowsPerPage;
+
+    //     const updatedRows = sortedRows.slice(startIndex, endIndex);
+    //     setVisibleRows(updatedRows);
+    //     console.log('Updated visible rows')
+
+    // }, [order, orderBy, page, rowsPerPage, rows]);
+
+    const handleChangePage = React.useCallback(
+        (event, newPage) => {
+            setPage(newPage);
+
+            // Calculate the start and end indices based on the new page and rowsPerPage
+            const startIndex = newPage * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+
+            // Update visibleRows with the rows within the new page and current sorting order
+            const sortedRows = stableSort(rows, getComparator(order, orderBy));
+            const updatedRows = sortedRows.slice(startIndex, endIndex);
+
+            // updateVisibleRows();
+
+            setVisibleRows(updatedRows);
+            console.log(updatedRows)
+            console.log('ChangePage Update')
+            // ...
+        },
+        [order, orderBy, rowsPerPage, rows],
+    );
+
+    const handleChangeRowsPerPage = React.useCallback(
+        (event) => {
+            const updatedRowsPerPage = parseInt(event.target.value, 10);
+            setRowsPerPage(updatedRowsPerPage);
+
+            setPage(0);
+
+            const sortedRows = stableSort(rows, getComparator(order, orderBy));
+            const updatedRows = sortedRows.slice(
+                0 * updatedRowsPerPage,
+                0 * updatedRowsPerPage + updatedRowsPerPage,
+            );
+
+            setVisibleRows(updatedRows);
+            // There is no layout jump to handle on the first page.
+            setPaddingHeight(0);
+            console.log('ChangeRowsPerPage update')
+        },
+        [order, orderBy, rows, rowsPerPage],
+    );
+
+
+    const handleRequestSort = React.useCallback(
+        (event, newOrderBy) => {
+            const isAsc = orderBy === newOrderBy && order === 'asc';
+            const toggledOrder = isAsc ? 'desc' : 'asc';
+            setOrder(toggledOrder);
+            setOrderBy(newOrderBy);
+
+            const sortedRows = stableSort(rows, getComparator(toggledOrder, newOrderBy));
+
+            // Calculate the start and end indices based on the new page and rowsPerPage
+            const startIndex = page * rowsPerPage;
+            const endIndex = startIndex + rowsPerPage;
+
+            // Update visibleRows with the rows within the new page and sorting order
+            const updatedRows = sortedRows.slice(startIndex, endIndex);
+
+            setVisibleRows(updatedRows);
+            console.log('RequestSort update')
+        },
+        [order, orderBy, page, rowsPerPage],
+    );
+
+    const handleSelectAllClick = (event) => {
+        if (event.target.checked) {
+            const newSelected = rows.map((n) => n.descripcion);
+            setSelected(newSelected);
+            return;
+        }
+        setSelected([]);
+    };
+
+    const handleClick = (event, descripcion) => {
+        const selectedIndex = selected.indexOf(descripcion);
+        let newSelected = [];
+
+        if (selectedIndex === -1) {
+            newSelected = newSelected.concat(selected, descripcion);
+        } else if (selectedIndex === 0) {
+            newSelected = newSelected.concat(selected.slice(1));
+        } else if (selectedIndex === selected.length - 1) {
+            newSelected = newSelected.concat(selected.slice(0, -1));
+        } else if (selectedIndex > 0) {
+            newSelected = newSelected.concat(
+                selected.slice(0, selectedIndex),
+                selected.slice(selectedIndex + 1),
+            );
+        }
+
+        setSelected(newSelected);
+    };
+
+
+
+
+    const handleChangeDense = (event) => {
+        setDense(event.target.checked);
+    };
+
+
+
+    const isSelected = (descripcion) => selected.indexOf(descripcion) !== -1;
+
+    return (
+        <Box sx={{ width: '66vw' }}>
+            <Paper sx={{ width: '100%', mb: 2 }}>
+                <EnhancedTableToolbar numSelected={selected.length} />
+                <TableContainer>
+                    <Table
+                        sx={{ minWidth: 750 }}
+                        aria-labelledby="tableTitle"
+                        size={dense ? 'small' : 'medium'}
+                    >
+                        <EnhancedTableHead
+                            numSelected={selected.length}
+                            order={order}
+                            orderBy={orderBy}
+                            onSelectAllClick={handleSelectAllClick}
+                            onRequestSort={handleRequestSort}
+                            rowCount={rows.length}
+                        />
+                        <TableBody>
+                            {visibleRows
+                                ? visibleRows.map((row, index) => {
+                                    const isItemSelected = isSelected(row.descripcion);
+                                    const labelId = `enhanced-table-checkbox-${index}`;
+
+                                    return (
+                                        <TableRow
+                                            hover
+                                            onClick={(event) => handleClick(event, row.descripcion)}
+                                            role="checkbox"
+                                            aria-checked={isItemSelected}
+                                            tabIndex={-1}
+                                            key={row.descripcion}
+                                            selected={isItemSelected}
+                                            sx={{ cursor: 'pointer' }}
+                                        >
+                                            <TableCell padding="checkbox">
+                                                {/* <Checkbox
+                                                    color="primary"
+                                                    checked={isItemSelected}
+                                                    inputProps={{
+                                                        'aria-labelledby': labelId,
+                                                    }}
+                                                /> */}
+                                            </TableCell>
+                                            <TableCell
+                                                component="th"
+                                                id={labelId}
+                                                scope="row"
+                                                padding="none"
+                                            >
+                                                {row.descripcion}
+                                            </TableCell>
+                                            <TableCell align="right">{row.categoria}</TableCell>
+                                            <TableCell align="right">{row.sku}</TableCell>
+                                            <TableCell align="right">{row.ean}</TableCell>
+                                            <TableCell align="right">{row.pvp}</TableCell>
+                                        </TableRow>
+                                    );
+                                })
+                                : null}
+                            {paddingHeight > 0 && (
+                                <TableRow
+                                    style={{
+                                        height: paddingHeight,
+                                    }}
+                                >
+                                    <TableCell colSpan={6} />
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+                <TablePagination
+                    labelRowsPerPage="Resultados por pagina"
+                    rowsPerPageOptions={[5, 10, 25]}
+                    component="div"
+                    count={rows.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                />
+            </Paper>
+            <FormControlLabel
+                control={<Switch checked={dense} onChange={handleChangeDense} />}
+                label="Agrupar Resultados"
+            />
+        </Box>
+    );
+}
